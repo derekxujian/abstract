@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>抽象画图片抽卡（1-16）</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .title {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      font-size: 1.05rem;
+      opacity: 0.9;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    #cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.18);
+      padding: 16px 14px;
+      cursor: pointer;
+      border-radius: 15px;
+      text-align: center;
+      min-width: 110px;
+      max-width: 140px;
+      flex: 1 0 110px;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .card:hover {
+      background: rgba(255,255,255,0.28);
+      transform: translateY(-3px);
+    }
+    .card h2 {
+      font-size: 2rem;
+      margin: 0 0 6px 0;
+      line-height: 1;
+    }
+    .card p {
+      margin: 0;
+      font-size: 0.95rem;
+      opacity: 0.95;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.82);
+      z-index: 1000;
+      padding: 18px;
+      box-sizing: border-box;
+    }
+    .modal-content {
+      position: relative;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      background: white;
+      color: black;
+      padding: 22px 18px;
+      border-radius: 15px;
+      max-width: 920px;
+      width: min(920px, 96vw);
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .modal-content h3 {
+      color: #667eea;
+      margin: 0 0 12px 0;
+      font-size: 1.25rem;
+    }
+
+    .img-wrap {
+      width: 100%;
+      display: grid;
+      place-items: center;
+      margin: 8px 0 10px 0;
+    }
+    #displayImg {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      object-fit: contain;
+      display: none;
+      background: #f6f7fb;
+    }
+    #imgStatus {
+      margin: 0;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: #333;
+      white-space: pre-wrap;
+      text-align: left;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 25px;
+      cursor: pointer;
+      margin: 6px 6px;
+      font-size: 1rem;
+    }
+    button:hover { background: #5a6fd8; }
+
+    a.btn-link {
+      display: inline-block;
+      background: #2c3e50;
+      color: white;
+      text-decoration: none;
+      padding: 12px 18px;
+      border-radius: 25px;
+      margin: 6px 6px;
+      font-size: 1rem;
+    }
+    a.btn-link:hover { background: #22313f; }
+
+    .close-x {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      border: none;
+      background: transparent;
+      color: #555;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 10px;
+    }
+    .close-x:hover {
+      background: rgba(0,0,0,0.06);
+    }
+
+    @media (max-width: 768px) {
+      .title { font-size: 1.8rem; }
+      .card { min-width: 96px; padding: 14px 12px; }
+      .card h2 { font-size: 1.8rem; }
+      .modal-content { padding: 18px 14px; }
+      #displayImg { max-height: 58vh; }
+      #imgStatus { font-size: 0.98rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 class="title">抽象画图片抽卡（1-16）</h1>
+    <p class="subtitle">点击序号卡片，查看对应图片。多人同时使用互不影响。</p>
+  </div>
+
+  <div id="cards"></div>
+
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="itemTitle">
+    <div class="modal-content">
+      <button class="close-x" aria-label="关闭" onclick="closeModal()">×</button>
+      <h3 id="itemTitle"></h3>
+
+      <div class="img-wrap">
+        <p id="imgStatus">正在加载图片…</p>
+        <img id="displayImg" alt="展示图片" />
+      </div>
+
+      <div style="margin-top: 6px;">
+        <a id="openInNewTab" class="btn-link" href="#" target="_blank" rel="noopener">在新标签页打开</a>
+        <button onclick="closeModal()">重新选择</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = 'https://derekxujian.github.io/abstract/';
+    const COUNT = 16;
+
+    // 生成 1..COUNT 的图片项：同一序号恒定对应同一图片
+    const items = Array.from({ length: COUNT }, (_, i) => {
+      const n = i + 1;
+      return {
+        index: n,
+        title: '第 ' + n + ' 张',
+        img: BASE_URL + n + '.png'
+      };
+    });
+
+    function createCards() {
+      const container = document.getElementById('cards');
+      container.innerHTML = '';
+      for (let i = 0; i < items.length; i++) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = '<h2>' + items[i].index + '</h2><p>图片卡</p>';
+        card.onclick = function() { showItem(i); };
+        container.appendChild(card);
+      }
+    }
+
+    function showItem(i) {
+      const item = items[i];
+
+      // 标题
+      document.getElementById('itemTitle').textContent = item.title;
+
+      // 图片加载状态
+      const imgEl = document.getElementById('displayImg');
+      const statusEl = document.getElementById('imgStatus');
+      imgEl.style.display = 'none';
+      statusEl.textContent = '正在加载图片…';
+
+      // 新标签页链接
+      const openLink = document.getElementById('openInNewTab');
+      openLink.href = item.img;
+
+      // 设置图片 src 并监听结果
+      imgEl.onload = function() {
+        statusEl.textContent = '';
+        imgEl.style.display = 'block';
+      };
+      imgEl.onerror = function() {
+        imgEl.style.display = 'none';
+        statusEl.textContent = '图片加载失败。\n\n请检查网络，或确认该图片地址可访问：\n' + item.img;
+      };
+      imgEl.src = item.img;
+
+      // 打开弹窗
+      document.getElementById('modal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    // 点击遮罩关闭
+    document.getElementById('modal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    // ESC 关闭
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    window.onload = function() {
+      createCards();
+    };
+  </script>
+</body>
+</html>
