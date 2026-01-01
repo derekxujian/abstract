@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>图片选择（1-16）</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .title {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      font-size: 1.05rem;
+      opacity: 0.9;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    #cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.18);
+      padding: 16px 14px;
+      cursor: pointer;
+      border-radius: 15px;
+      text-align: center;
+      min-width: 110px;
+      max-width: 140px;
+      flex: 1 0 110px;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .card:hover {
+      background: rgba(255,255,255,0.28);
+      transform: translateY(-3px);
+    }
+    .card h2 {
+      font-size: 2rem;
+      margin: 0 0 6px 0;
+      line-height: 1;
+    }
+    .card p {
+      margin: 0;
+      font-size: 0.95rem;
+      opacity: 0.95;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.82);
+      z-index: 1000;
+      padding: 18px;
+      box-sizing: border-box;
+    }
+    .modal-content {
+      position: relative;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      background: white;
+      color: black;
+      padding: 22px 18px;
+      border-radius: 15px;
+      max-width: 980px;
+      width: min(980px, 96vw);
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .modal-content h3 {
+      color: #667eea;
+      margin: 0 0 12px 0;
+      font-size: 1.25rem;
+    }
+
+    .viewer-wrap {
+      width: 100%;
+      margin: 8px 0 12px 0;
+      display: grid;
+      place-items: center;
+    }
+
+    #viewerFrame {
+      width: 100%;
+      height: 70vh;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      background: #f6f7fb;
+    }
+
+    #status {
+      margin: 0 0 10px 0;
+      font-size: 1.02rem;
+      line-height: 1.6;
+      color: #333;
+      white-space: pre-wrap;
+      text-align: left;
+      width: 100%;
+    }
+
+    a.btn-link {
+      display: inline-block;
+      background: #2c3e50;
+      color: white;
+      text-decoration: none;
+      padding: 12px 18px;
+      border-radius: 25px;
+      margin: 6px 6px;
+      font-size: 1rem;
+    }
+    a.btn-link:hover { background: #22313f; }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 25px;
+      cursor: pointer;
+      margin: 6px 6px;
+      font-size: 1rem;
+    }
+    button:hover { background: #5a6fd8; }
+
+    .close-x {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      border: none;
+      background: transparent;
+      color: #555;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 10px;
+    }
+    .close-x:hover {
+      background: rgba(0,0,0,0.06);
+    }
+
+    @media (max-width: 768px) {
+      .title { font-size: 1.8rem; }
+      .card { min-width: 96px; padding: 14px 12px; }
+      .card h2 { font-size: 1.8rem; }
+      .modal-content { padding: 18px 14px; }
+      #viewerFrame { height: 62vh; }
+      #status { font-size: 0.98rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 class="title">图片选择（1-16）</h1>
+    <p class="subtitle">点击序号卡片，打开对应图片链接。多人同时使用互不影响。</p>
+  </div>
+
+  <div id="cards"></div>
+
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="itemTitle">
+    <div class="modal-content">
+      <button class="close-x" aria-label="关闭" onclick="closeModal()">×</button>
+      <h3 id="itemTitle"></h3>
+
+      <p id="status">如果下方未正常显示（部分平台会禁止嵌入），请点击“在新标签页打开”。</p>
+
+      <div class="viewer-wrap">
+        <iframe id="viewerFrame" title="图片查看"></iframe>
+      </div>
+
+      <div style="margin-top: 6px;">
+        <a id="openInNewTab" class="btn-link" href="#" target="_blank" rel="noopener">在新标签页打开</a>
+        <button onclick="closeModal()">重新选择</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const items = [
+      { index: 1, title: '第 1 张', url: 'https://app.yinxiang.com/fx/09d26fdd-ba98-40a9-8c9b-88799bedf217' },
+      { index: 2, title: '第 2 张', url: 'https://app.yinxiang.com/fx/54c9528c-dff7-4f2d-9da9-079981ef723e' },
+      { index: 3, title: '第 3 张', url: 'https://app.yinxiang.com/fx/b257fc53-f61f-4c0c-a8ea-bade6799b7ab' },
+      { index: 4, title: '第 4 张', url: 'https://app.yinxiang.com/fx/1b4aeb5e-4eeb-4f05-9e59-f0923c5fc109' },
+      { index: 5, title: '第 5 张', url: 'https://app.yinxiang.com/fx/9789baf1-82c1-4f56-a42d-9c4abf34be40' },
+      { index: 6, title: '第 6 张', url: 'https://app.yinxiang.com/fx/a5f82793-cfe9-4ac8-89d1-8e4a9548f2cb' },
+      { index: 7, title: '第 7 张', url: 'https://app.yinxiang.com/fx/9797fa31-e789-402d-8724-1340503094f2' },
+      { index: 8, title: '第 8 张', url: 'https://app.yinxiang.com/fx/5254e82c-c814-4c80-aefe-5ea1e8b5faf1' },
+      { index: 9, title: '第 9 张', url: 'https://app.yinxiang.com/fx/e7727281-b7b3-4f4b-9fa8-69d6e5312e59' },
+      { index: 10, title: '第 10 张', url: 'https://app.yinxiang.com/fx/b5a04246-2a72-41f3-a6f8-d907403f34b9' },
+      { index: 11, title: '第 11 张', url: 'https://app.yinxiang.com/fx/843c6209-b0bb-4b19-96bd-936665f9ee42' },
+      { index: 12, title: '第 12 张', url: 'https://app.yinxiang.com/fx/deea78e7-bfde-4c1a-9d60-e6bfd403b3ca' },
+      { index: 13, title: '第 13 张', url: 'https://app.yinxiang.com/fx/7b1b34b2-88d7-4f00-959a-1c1491570fd8' },
+      { index: 14, title: '第 14 张', url: 'https://app.yinxiang.com/fx/13b1a754-7931-4739-ba61-b16c5ecf65ca' },
+      { index: 15, title: '第 15 张', url: 'https://app.yinxiang.com/fx/b02e4d09-0c9b-4abd-9ea5-8f1d7d7d8b96' },
+      { index: 16, title: '第 16 张', url: 'https://app.yinxiang.com/fx/31ad282a-f937-4384-8919-cb6156bd7536' }
+    ];
+
+    function createCards() {
+      const container = document.getElementById('cards');
+      container.innerHTML = '';
+      for (let i = 0; i < items.length; i++) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = '<h2>' + items[i].index + '</h2><p>图片</p>';
+        card.onclick = function() { showItem(i); };
+        container.appendChild(card);
+      }
+    }
+
+    function showItem(i) {
+      const item = items[i];
+      document.getElementById('itemTitle').textContent = item.title;
+
+      const openLink = document.getElementById('openInNewTab');
+      openLink.href = item.url;
+
+      const frame = document.getElementById('viewerFrame');
+      frame.src = item.url;
+
+      document.getElementById('modal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+      const frame = document.getElementById('viewerFrame');
+      frame.src = 'about:blank';
+    }
+
+    document.getElementById('modal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    window.onload = function() {
+      createCards();
+    };
+  </script>
+</body>
+</html>
